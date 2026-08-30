@@ -154,3 +154,18 @@ def test_sync_engine_dry_run(tmp_path, sample_dive_record):
     result = engine.sync(local_dir=tmp_path, download_from_cloud=False, dry_run=True)
     assert result.total_found == 0
     assert result.is_dry_run is True
+
+
+def test_gps_geocoder_decode():
+    from divecloud.geocoder import GPSGeocoder
+
+    # Test BAM binary angle measurement decoding
+    lat, lng = GPSGeocoder.parse_gps_string("GPS=[1.1082911E9,-1.0296864E9],MINTEMP=83.5")
+    assert lat is not None and lng is not None
+    assert round(lat, 2) == 46.45
+    assert round(lng, 2) == -86.31
+
+    # Test invalid / zero GPS
+    lat_zero, lng_zero = GPSGeocoder.parse_gps_string("GPS=[0.0,0.0],MINTEMP=80.0")
+    assert lat_zero is None
+    assert lng_zero is None

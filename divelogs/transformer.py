@@ -96,6 +96,12 @@ class DiveTransformer:
         if record.max_temp_f is not None:
             payload["surfacetemp"] = cls.fahrenheit_to_celsius(record.max_temp_f)
 
+        if record.latitude is not None:
+            payload["lat"] = record.latitude
+
+        if record.longitude is not None:
+            payload["lng"] = record.longitude
+
         if record.site:
             payload["divesite"] = record.site
 

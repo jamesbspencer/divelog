@@ -158,19 +158,32 @@ def cmd_convert(args: argparse.Namespace) -> int:
         try:
             dive = ZXUParser.parse_file(f)
             dives.append(dive)
-            if not args.combined:
-                out_file = out_dir / f"{dive.duid}.uddf"
-                UDDFExporter.export_single_dive(dive, out_file)
-                print(f"  ✅ Converted {f.name} -> {out_file.name} (Dive #{dive.dive_number}, {len(dive.samples)} samples)")
         except Exception as e:
             print(f"  ❌ Error parsing {f.name}: {e}")
 
-    if args.combined and dives:
+    # Propagate location for dives in the same trip missing GPS
+    for d in dives:
+        if not d.location:
+            for other in dives:
+                if other.location and other.start_time and d.start_time:
+                    diff_days = abs((d.start_time.date() - other.start_time.date()).days)
+                    if diff_days <= 1:
+                        d.location = other.location
+                        d.latitude = other.latitude
+                        d.longitude = other.longitude
+                        break
+
+    if not args.combined:
+        for dive in dives:
+            out_file = out_dir / f"{dive.duid}.uddf"
+            UDDFExporter.export_single_dive(dive, out_file)
+            loc_label = f" [{dive.location}]" if dive.location else ""
+            print(f"  ✅ Converted {dive.duid}.zxu -> {out_file.name} (Dive #{dive.dive_number}, {len(dive.samples)} samples{loc_label})")
+        print(f"\n🎉 Successfully exported {len(dives)} individual UDDF file(s) into: {out_dir}")
+    elif args.combined and dives:
         combined_file = out_dir / "all_dives.uddf"
         UDDFExporter.export_dives(dives, combined_file)
         print(f"\n🎉 Successfully exported all {len(dives)} dives into: {combined_file}")
-    elif not args.combined and dives:
-        print(f"\n🎉 Successfully exported {len(dives)} individual UDDF file(s) into: {out_dir}")
 
     return 0
 

@@ -11,6 +11,8 @@ from datetime import datetime
 from pathlib import Path
 from typing import List, Optional
 
+from divecloud.geocoder import GPSGeocoder
+
 logger = logging.getLogger(__name__)
 
 
@@ -68,6 +70,8 @@ class DiveRecord:
     samples: List[DiveSample] = field(default_factory=list)
     site: str = ""
     location: str = ""
+    latitude: Optional[float] = None
+    longitude: Optional[float] = None
     notes: str = ""
     raw_filename: str = ""
 
@@ -196,10 +200,25 @@ class ZXUParser:
         record.computer.manufacturer = root.findtext("MANUFACTURER", "Apeks")
         record.computer.firmware = root.findtext("PDC_FIRMWARE", "")
 
-        # Metadata
+        # Metadata & Location
         record.site = root.findtext("SITE", "") or ""
-        record.location = root.findtext("LOCATION", "") or ""
+        raw_location = root.findtext("LOCATION", "") or ""
         record.notes = root.findtext("NOTES", "") or ""
+
+        # Decode GPS & Reverse Geocode
+        lat, lng = GPSGeocoder.parse_gps_string(raw_location)
+        if lat is not None and lng is not None:
+            record.latitude = lat
+            record.longitude = lng
+            resolved = GPSGeocoder.reverse_geocode(lat, lng)
+            record.location = resolved or f"GPS: {lat}, {lng}"
+        elif "GPS=[" in raw_location:
+            record.location = ""
+        else:
+            record.location = raw_location
+
+        if not record.notes and "GPS=[" in raw_location and record.location:
+            record.notes = f"Coordinates: {lat}, {lng}" if lat is not None else ""
 
         # Parse DIVESTATS
         divestats_str = root.findtext("DIVESTATS", "") or ""

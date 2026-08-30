@@ -126,6 +126,18 @@ class OneWaySyncEngine:
                 result.failed += 1
                 result.failed_dives.append(f"{f.name} (parse error)")
 
+        # Propagate location across same-trip dives if missing
+        for rec in records:
+            if not rec.location:
+                for other in records:
+                    if other.location and other.start_time and rec.start_time:
+                        diff_days = abs((rec.start_time.date() - other.start_time.date()).days)
+                        if diff_days <= 1:
+                            rec.location = other.location
+                            rec.latitude = other.latitude
+                            rec.longitude = other.longitude
+                            break
+
         # Step 3: Fetch existing dives on Divelogs.org for deduplication
         existing_divelist: List[Dict[str, Any]] = []
         if not dry_run or self.divelogs.config.username:
