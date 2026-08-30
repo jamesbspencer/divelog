@@ -109,6 +109,12 @@ class UDDFExporter:
 
             tank_data_before = ET.SubElement(info_before, "tankdata")
             ET.SubElement(tank_data_before, "link", {"ref": mix_id})
+            # Standard 80 cuft (AL80) has 11.1 Liters = 0.0111 m^3 water capacity
+            tank_vol_m3 = 0.0111 if (dive.tank.volume_cuft or 80.0) == 80.0 else round((dive.tank.volume_cuft or 80.0) * 0.0283168 / (3000.0 / 14.696), 4)
+            ET.SubElement(tank_data_before, "tankvolume").text = str(tank_vol_m3)
+            working_pa = cls.psi_to_pascal(dive.tank.working_pressure_psi or 3000.0)
+            ET.SubElement(tank_data_before, "workingpressure").text = str(working_pa)
+
             if dive.tank.start_pressure_psi is not None:
                 start_pa = cls.psi_to_pascal(dive.tank.start_pressure_psi)
                 ET.SubElement(tank_data_before, "tankpressurebegin").text = str(start_pa)

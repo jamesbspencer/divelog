@@ -47,9 +47,13 @@ class DiveTransformer:
             comp_parts.append(record.computer.model)
         dc_model_str = " ".join(comp_parts) if comp_parts else "Apeks DSX"
 
-        # Tank data
+        # Tank data (80 cuft / AL80 standard: 11.1 Liters water capacity, 207 bar / 3000 psi working pressure)
         tanks: List[Dict[str, Any]] = []
         tank_entry: Dict[str, Any] = {
+            "tank": "AL80",
+            "tankname": "Aluminum 80",
+            "vol": 11.1,
+            "wp": int(round((record.tank.working_pressure_psi or 3000.0) * 0.06894757)),
             "o2": int(round(record.tank.gas_mix.o2_fraction * 100)),
             "he": int(round(record.tank.gas_mix.he_fraction * 100)),
         }

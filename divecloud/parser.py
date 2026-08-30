@@ -40,8 +40,8 @@ class TankInfo:
     """Scuba tank and gas consumption information."""
     start_pressure_psi: Optional[float] = None
     end_pressure_psi: Optional[float] = None
-    volume_cuft: Optional[float] = None
-    working_pressure_psi: Optional[float] = None
+    volume_cuft: float = 80.0
+    working_pressure_psi: float = 3000.0
     gas_mix: GasMix = field(default_factory=GasMix)
 
 
