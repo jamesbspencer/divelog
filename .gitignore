@@ -216,3 +216,11 @@ __marimo__/
 
 # Streamlit
 .streamlit/secrets.toml
+
+# Downloaded Dive Logs & Sync Temp Files
+downloads/
+exports/
+*.zxu
+*.uddf
+
+
