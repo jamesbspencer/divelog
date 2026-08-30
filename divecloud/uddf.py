@@ -54,7 +54,25 @@ class UDDFExporter:
         personal = ET.SubElement(owner, "personal")
         ET.SubElement(personal, "first_name").text = "Diver"
 
-        # 3. Gas Definitions (collect unique mixes across all dives)
+        # 3. Divesite Definitions (collect unique sites and GPS coordinates across all dives)
+        site_map = {}
+        for idx, dive in enumerate(dives, 1):
+            if dive.location or (dive.latitude is not None and dive.longitude is not None):
+                site_key = (dive.location, dive.latitude, dive.longitude)
+                if site_key not in site_map:
+                    site_id = f"site_{len(site_map) + 1}"
+                    site_map[site_key] = site_id
+                    site_elem = ET.SubElement(root, "divesite", {"id": site_id})
+                    ET.SubElement(site_elem, "name").text = dive.site or dive.location or f"Site {len(site_map)}"
+                    geo = ET.SubElement(site_elem, "geography")
+                    if dive.location:
+                        ET.SubElement(geo, "location").text = dive.location
+                    if dive.latitude is not None:
+                        ET.SubElement(geo, "latitude").text = str(dive.latitude)
+                    if dive.longitude is not None:
+                        ET.SubElement(geo, "longitude").text = str(dive.longitude)
+
+        # 4. Gas Definitions (collect unique mixes across all dives)
         gas_defs = ET.SubElement(root, "gasdefinitions")
         mix_map = {}
         for idx, dive in enumerate(dives, 1):
@@ -69,7 +87,7 @@ class UDDFExporter:
                 ET.SubElement(mix_elem, "n2").text = f"{mix.n2_fraction:.3f}"
                 ET.SubElement(mix_elem, "he").text = f"{mix.he_fraction:.3f}"
 
-        # 4. Profile Data
+        # 5. Profile Data
         profile_data = ET.SubElement(root, "profiledata")
         rep_group = ET.SubElement(profile_data, "repetitiongroup", {"id": "rg_1"})
 
@@ -93,6 +111,11 @@ class UDDFExporter:
 
             # Information Before Dive
             info_before = ET.SubElement(dive_elem, "informationbeforedive")
+
+            # Link to dive site if available
+            site_key = (dive.location, dive.latitude, dive.longitude)
+            if site_key in site_map:
+                ET.SubElement(info_before, "link", {"ref": site_map[site_key]})
 
             # Dive computer info
             if dive.computer.model != "Unknown":
