@@ -108,7 +108,21 @@ class DiveTransformer:
         if record.location:
             payload["location"] = record.location
 
+        # Build notes with SAC if available
+        notes_parts = []
+        p_start = record.tank.start_pressure_psi or 0.0
+        p_end = record.tank.end_pressure_psi or 0.0
+        delta_p = p_start - p_end
+        if delta_p > 0 and record.avg_depth_feet > 0 and record.duration_minutes > 0:
+            ata = 1.0 + (record.avg_depth_feet / 33.0)
+            sac_psi = delta_p / (record.duration_minutes * ata)
+            rmv_cfm = sac_psi * (77.4 / 3000.0)
+            notes_parts.append(f"SAC: {sac_psi:.1f} psi/min ({rmv_cfm:.2f} cfm)")
+
         if record.notes:
-            payload["notes"] = record.notes
+            notes_parts.append(record.notes)
+
+        if notes_parts:
+            payload["notes"] = " | ".join(notes_parts)
 
         return payload

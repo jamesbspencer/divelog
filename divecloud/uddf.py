@@ -146,15 +146,35 @@ class UDDFExporter:
                 end_pa = cls.psi_to_pascal(dive.tank.end_pressure_psi)
                 ET.SubElement(tank_data_after, "tankpressureend").text = str(end_pa)
 
-            # Site and location notes
-            if dive.site or dive.location or dive.notes:
-                notes_text = []
-                if dive.site:
-                    notes_text.append(f"Site: {dive.site}")
-                if dive.location:
-                    notes_text.append(f"Location: {dive.location}")
-                if dive.notes:
-                    notes_text.append(dive.notes)
+                # Breathing consumption volume in m^3 (SI standard)
+                p_start = dive.tank.start_pressure_psi or 0.0
+                delta_p = p_start - dive.tank.end_pressure_psi
+                if delta_p > 0:
+                    # Standard AL80 basis (77.4 cu ft = 2.1917 m^3 at 3000 psi)
+                    consumed_m3 = (delta_p / 3000.0) * 2.1917
+                    ET.SubElement(tank_data_after, "breathingconsumptionvolume").text = f"{consumed_m3:.4f}"
+
+            # Site, location, and SAC notes
+            notes_text = []
+            if dive.site:
+                notes_text.append(f"Site: {dive.site}")
+            if dive.location:
+                notes_text.append(f"Location: {dive.location}")
+
+            # Calculate SAC if tank telemetry is available
+            p_start = dive.tank.start_pressure_psi or 0.0
+            p_end = dive.tank.end_pressure_psi or 0.0
+            delta_p = p_start - p_end
+            if delta_p > 0 and dive.avg_depth_feet > 0 and dive.duration_minutes > 0:
+                ata = 1.0 + (dive.avg_depth_feet / 33.0)
+                sac_psi = delta_p / (dive.duration_minutes * ata)
+                rmv_cfm = sac_psi * (77.4 / 3000.0)  # AL80 basis
+                notes_text.append(f"SAC: {sac_psi:.1f} psi/min ({rmv_cfm:.2f} cfm)")
+
+            if dive.notes:
+                notes_text.append(dive.notes)
+
+            if notes_text:
                 ET.SubElement(info_after, "notes").text = " | ".join(notes_text)
 
         # Convert to pretty XML string
