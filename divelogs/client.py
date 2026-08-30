@@ -142,6 +142,30 @@ class DivelogsClient:
         except requests.exceptions.RequestException as e:
             raise DivelogsUploadError(f"Network failure uploading dive: {e}") from e
 
+    def update_dive(self, dive_id: str | int, dive_data: Dict[str, Any]) -> Dict[str, Any]:
+        """Update an existing dive on Divelogs.org."""
+        self.ensure_authenticated()
+
+        url = f"{self.config.api_url}/dive/{dive_id}"
+        logger.debug("Updating dive %s on Divelogs.org...", dive_id)
+
+        try:
+            resp = self.session.put(url, json=dive_data, timeout=self.config.timeout)
+            if resp.status_code == 401:
+                self.authenticate()
+                resp = self.session.put(url, json=dive_data, timeout=self.config.timeout)
+
+            if resp.status_code not in (200, 201):
+                raise DivelogsUploadError(
+                    f"Failed to update dive {dive_id}",
+                    status_code=resp.status_code,
+                    details=resp.text,
+                )
+            return resp.json() if resp.text else {"status": "success"}
+
+        except requests.exceptions.RequestException as e:
+            raise DivelogsUploadError(f"Network failure updating dive {dive_id}: {e}") from e
+
     def post_dives(self, dives_data: List[Dict[str, Any]]) -> Dict[str, Any]:
         """Batch upload multiple dives to Divelogs.org."""
         self.ensure_authenticated()

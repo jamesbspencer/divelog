@@ -135,7 +135,10 @@ class ZXUParser:
 
             try:
                 if zdh_match.group(6):
-                    record.duration_minutes = float(zdh_match.group(6))
+                    # Group 6 is surface/start temperature in Fahrenheit
+                    temp_f = float(zdh_match.group(6))
+                    if 32.0 <= temp_f <= 115.0 and record.max_temp_f is None:
+                        record.max_temp_f = temp_f
             except ValueError:
                 pass
 
@@ -161,6 +164,9 @@ class ZXUParser:
                     record.min_temp_f = min(temps)
                 if record.max_temp_f is None:
                     record.max_temp_f = max(temps)
+
+        if record.duration_minutes == 0.0 and record.samples:
+            record.duration_minutes = record.samples[-1].time_seconds / 60.0
 
         return record
 
@@ -214,6 +220,16 @@ class ZXUParser:
                     record.min_temp_f = float(stats["MINTEMP"])
                 except ValueError:
                     pass
+            if "EDT" in stats and record.duration_minutes == 0.0:
+                edt_str = stats["EDT"].strip()
+                if len(edt_str) == 6:
+                    try:
+                        hours = int(edt_str[:2])
+                        mins = int(edt_str[2:4])
+                        secs = int(edt_str[4:6])
+                        record.duration_minutes = (hours * 60.0) + mins + (secs / 60.0)
+                    except ValueError:
+                        pass
 
         # Parse TANK
         tank_str = root.findtext("TANK", "") or ""
@@ -248,9 +264,11 @@ class ZXUParser:
                     record.avg_depth_feet = float(tank_kv["AVGDEPTH"])
                 except ValueError:
                     pass
-            if "DIVETIME" in tank_kv and record.duration_minutes == 0.0:
+            if "DIVETIME" in tank_kv:
                 try:
-                    record.duration_minutes = float(tank_kv["DIVETIME"])
+                    divetime_val = float(tank_kv["DIVETIME"])
+                    if divetime_val > 0.0:
+                        record.duration_minutes = divetime_val
                 except ValueError:
                     pass
 
